@@ -147,6 +147,7 @@ class MessageSerializer(object):
             if HAS_FAST:
                 schemaless_writer(outf, json_schema, record)
             else:
+                print("OH NO! WRITING WITH SLOW AVRO")
                 writer = self.id_to_writers[schema_id]
                 # write the record to the rest of it
                 # Create an encoder that we'll write to
@@ -178,6 +179,7 @@ class MessageSerializer(object):
                 self.id_to_decoder_func[schema_id] = decoder_func
                 return self.id_to_decoder_func[schema_id]
             except:
+                print("OH NO! READING WITH SLOW AVRO")
                 pass
 
         # fetch from schema reg
