@@ -112,7 +112,7 @@ class CachedSchemaRegistryClient(object):
                 self._add_to_cache(self.subject_to_schema_versions,
                                    subject, schema, version)
 
-    def _cache_json_schema(self, schema, schema_id, subject=None, version=None):
+    def _cache_json_schema(self, schema, schema_id):
         if schema_id not in self.id_to_schema:
             self.id_to_json_schema[schema_id] = schema.to_json()
 
@@ -149,11 +149,12 @@ class CachedSchemaRegistryClient(object):
             raise ClientError("Unable to register schema. Error code:" + str(code))
         # result is a dict
         schema_id = result['id']
+        print(result)
         # cache it
         self._cache_schema(avro_schema, schema_id, subject)
 
         if HAS_FAST:
-            self._cache_json_schema(result['schema'], schema_id, subject)
+            self._cache_json_schema(result['schema'], schema_id)
 
         return schema_id
 
