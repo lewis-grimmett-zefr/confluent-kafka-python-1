@@ -168,14 +168,13 @@ class MessageSerializer(object):
             try:
                 schema = self.registry_client.get_by_id(schema_id, json_format=True)
 
-                schema_dict = schema.to_json()
-                obj = read_data(payload, schema_dict)
+                obj = read_data(payload, schema)
                 # here means we passed so this is something fastavro can do
                 # seek back since it will be called again for the
                 # same payload - one time hit
 
                 payload.seek(curr_pos)
-                decoder_func = lambda p: read_data(p, schema_dict)
+                decoder_func = lambda p: read_data(p, schema)
                 self.id_to_decoder_func[schema_id] = decoder_func
                 return self.id_to_decoder_func[schema_id]
             except:
