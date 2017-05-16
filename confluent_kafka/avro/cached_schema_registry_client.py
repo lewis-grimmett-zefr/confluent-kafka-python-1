@@ -149,12 +149,8 @@ class CachedSchemaRegistryClient(object):
             raise ClientError("Unable to register schema. Error code:" + str(code))
         # result is a dict
         schema_id = result['id']
-        print(result)
         # cache it
         self._cache_schema(avro_schema, schema_id, subject)
-
-        if HAS_FAST:
-            self._cache_json_schema(result['schema'], schema_id)
 
         return schema_id
 
@@ -168,6 +164,7 @@ class CachedSchemaRegistryClient(object):
         if json_format:
             if schema_id in self.id_to_json_schema:
                 return self.id_to_json_schema[schema_id]
+        else:
             if schema_id in self.id_to_schema:
                 return self.id_to_schema[schema_id]
         # fetch from the registry
@@ -184,10 +181,18 @@ class CachedSchemaRegistryClient(object):
             # need to parse the schema
             schema_str = result.get("schema")
             try:
-                result = loads(schema_str)
+                avro_schema = loads(schema_str)
                 # cache it
-                self._cache_schema(result, schema_id)
-                return result
+                self._cache_schema(avro_schema, schema_id)
+
+                if HAS_FAST:
+                    json_schema = json.loads(schema_str)
+                    self._cache_json_schema(json_schema, schema_id)
+
+                    if json_format:
+                        return json_schema
+                return avro_schema
+
             except:
                 # bad schema - should not happen
                 raise ClientError("Received bad schema from registry.")
