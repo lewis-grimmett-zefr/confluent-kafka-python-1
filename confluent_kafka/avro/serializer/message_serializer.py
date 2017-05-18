@@ -165,18 +165,19 @@ class MessageSerializer(object):
         if HAS_FAST:
             # try to use fast avro
             try:
-                schema = self.registry_client.get_by_id(schema_id, json_format=True)
-                # here means we passed so this is something fastavro can do
-                # seek back since it will be called again for the
-                # same payload - one time hit
-                read_data(payload, schema)
+                if schema_id not in self.id_to_decoder_func:
+                    schema = self.registry_client.get_by_id(schema_id, json_format=True)
+                    # here means we passed so this is something fastavro can do
+                    # seek back since it will be called again for the
+                    # same payload - one time hit
+                    read_data(payload, schema)
 
-                # If we reach this point, this means we have fastavro and it can
-                # do this deserialization. Rewind since this method just determines
-                # the reader function and we need to deserialize again along the
-                # normal path.
-                payload.seek(curr_pos)
-                self.id_to_decoder_func[schema_id] = lambda p: read_data(p, schema)
+                    # If we reach this point, this means we have fastavro and it can
+                    # do this deserialization. Rewind since this method just determines
+                    # the reader function and we need to deserialize again along the
+                    # normal path.
+                    payload.seek(curr_pos)
+                    self.id_to_decoder_func[schema_id] = lambda p: read_data(p, schema)
                 return self.id_to_decoder_func[schema_id]
             except Exception as e:
                 print('FastAvro Read Failed', e)
