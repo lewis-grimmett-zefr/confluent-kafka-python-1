@@ -165,6 +165,7 @@ class MessageSerializer(object):
         if HAS_FAST:
             # try to use fast avro
             try:
+                raise Exception()
                 if schema_id not in self.id_to_decoder_func:
                     schema = self.registry_client.get_by_id(schema_id, json_format=True)
                     # here means we passed so this is something fastavro can do
