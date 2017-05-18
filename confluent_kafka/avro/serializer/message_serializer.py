@@ -178,7 +178,8 @@ class MessageSerializer(object):
                 payload.seek(curr_pos)
                 self.id_to_decoder_func[schema_id] = lambda p: read_data(p, schema)
                 return self.id_to_decoder_func[schema_id]
-            except:
+            except Exception as e:
+                print('FastAvro Read Failed', e)
                 pass
 
         # fetch from schema reg
