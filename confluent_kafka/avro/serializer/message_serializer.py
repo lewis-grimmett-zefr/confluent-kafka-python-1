@@ -39,8 +39,8 @@ MAGIC_BYTE = 0
 
 HAS_FAST = False
 try:
-    from fastavro.reader import read_data
-    from fastavro.writer import schemaless_writer
+    from fastavro._reader import read_data
+    from fastavro._writer import acquaint_schema, write_data
 
     HAS_FAST = True
 except:
@@ -102,7 +102,10 @@ class MessageSerializer(object):
             raise serialize_err(message)
 
         # cache writer
-        self.id_to_writers[schema_id] = avro.io.DatumWriter(schema)
+        if schema_id not in self.id_to_writers:
+            self.id_to_writers[schema_id] = avro.io.DatumWriter(schema)
+            json_schema = self.registry_client.get_by_id(schema_id, json_format=True)
+            acquaint_schema(json_schema)
 
         return self.encode_record_with_schema_id(schema_id, record, is_key=is_key)
 
@@ -144,7 +147,7 @@ class MessageSerializer(object):
             outf.write(struct.pack('>I', schema_id))
 
             if HAS_FAST:
-                schemaless_writer(outf, json_schema, record)
+                write_data(outf, record, json_schema)
             else:
                 writer = self.id_to_writers[schema_id]
                 # write the record to the rest of it
@@ -165,7 +168,6 @@ class MessageSerializer(object):
         if HAS_FAST:
             # try to use fast avro
             try:
-                raise Exception()
                 if schema_id not in self.id_to_decoder_func:
                     schema = self.registry_client.get_by_id(schema_id, json_format=True)
                     # here means we passed so this is something fastavro can do
