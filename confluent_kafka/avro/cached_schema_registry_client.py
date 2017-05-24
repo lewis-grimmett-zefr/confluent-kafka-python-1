@@ -115,7 +115,7 @@ class CachedSchemaRegistryClient(object):
                                    subject, schema, version)
 
     def _cache_json_schema(self, schema, schema_id):
-        if schema_id not in self.id_to_schema:
+        if schema_id not in self.id_to_json_schema:
             self.id_to_json_schema[schema_id] = schema.to_json()
 
     def register(self, subject, avro_schema):
