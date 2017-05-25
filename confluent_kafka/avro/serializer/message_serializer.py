@@ -121,13 +121,13 @@ class MessageSerializer(object):
         serialize_err = KeySerializerError if is_key else ValueSerializerError
 
         if HAS_FAST:
-            json_schema = self.registry_client.get_by_id(schema_id, json_format=True)
+            json_schema = self.registry_client.id_to_json_schema.get(schema_id)
         else:
             if schema_id not in self.id_to_writers:
                 # get the writer + schema
 
                 try:
-                    schema = self.registry_client.get_by_id(schema_id)
+                    schema = self.registry_client.id_to_schema.get(schema_id)
                     if not schema:
                         raise serialize_err("Schema does not exist")
                     self.id_to_writers[schema_id] = avro.io.DatumWriter(schema)
@@ -156,6 +156,31 @@ class MessageSerializer(object):
                 # write the magic byte
                 # write the object in 'obj' as Avro to the fake file...
                 writer.write(record, encoder)
+
+            return outf.getvalue()
+
+    def fast_encode_record(self, schema_id, schema, record):
+        """
+        Encode a record with a given schema id.  The record must
+        be a python dictionary.
+        @:param: schema_id : integer ID
+        @:param: record : An object to serialize
+        @:param is_key : If the record is a key
+        @:returns: decoder function
+        """
+
+        # get the writer
+        with ContextStringIO() as outf:
+            # write the header
+            # magic byte
+
+            outf.write(struct.pack('b', MAGIC_BYTE))
+
+            # write the schema ID in network byte order (big end)
+
+            outf.write(struct.pack('>I', schema_id))
+
+            write_data(outf, record, schema)
 
             return outf.getvalue()
 

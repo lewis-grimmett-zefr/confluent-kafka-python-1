@@ -40,6 +40,18 @@ class AvroProducer(Producer):
         self._key_schema = default_key_schema
         self._value_schema = default_value_schema
 
+        self.json_schema = None
+        self.schema_id = None
+
+        self._setup()
+
+    def _setup(self):
+        self.key_schema_id = self._serializer.registry_client.register()
+        self.value_schema_id = self._serializer.registry_client.register()
+
+        self.key_json_schema = self._serializer.registry_client.get_by_id(self.key_schema_id, json_format=True)
+        self.value_json_schema = self._serializer.registry_client.register(self.value_schema_id, json_format=True)
+
     def produce(self, **kwargs):
         """
             Sends message to kafka by encoding with specified avro schema
@@ -72,6 +84,67 @@ class AvroProducer(Producer):
                 raise KeySerializerError("Avro schema required for key")
 
         super(AvroProducer, self).produce(topic, value, key, **kwargs)
+
+
+class FastAvroProducer(Producer):
+    """
+        Kafka Producer client which does avro schema encoding to messages.
+        Handles schema registration, Message serialization.
+
+        Constructor takes below parameters
+
+        @:param: config: dict object with config parameters containing url for schema registry (schema.registry.url).
+        @:param: default_key_schema: Optional avro schema for key
+        @:param: default_value_schema: Optional avro schema for value
+    """
+
+    def __init__(self, config, default_key_schema=None,
+                 default_value_schema=None, schema_registry=None):
+        schema_registry_url = config.pop("schema.registry.url", None)
+        if schema_registry is None:
+            if schema_registry_url is None:
+                raise ValueError("Missing parameter: schema.registry.url")
+            schema_registry = CachedSchemaRegistryClient(url=schema_registry_url)
+        elif schema_registry_url is not None:
+            raise ValueError("Cannot pass schema_registry along with schema.registry.url config")
+
+        super(FastAvroProducer, self).__init__(config)
+        self._serializer = MessageSerializer(schema_registry)
+        self._key_schema = default_key_schema
+        self._value_schema = default_value_schema
+
+        self.json_schema = None
+        self.schema_id = None
+
+        self._setup()
+
+    def _setup(self):
+        self.key_schema_id = self._serializer.registry_client.register()
+        self.value_schema_id = self._serializer.registry_client.register()
+
+        self.key_json_schema = self._serializer.registry_client.get_by_id(self.key_schema_id, json_format=True)
+        self.value_json_schema = self._serializer.registry_client.register(self.value_schema_id, json_format=True)
+
+    def produce(self, **kwargs):
+        """
+            Sends message to kafka by encoding with specified avro schema
+            @:param: topic: topic name
+            @:param: value: An object to serialize
+            @:param: value_schema : Avro schema for value
+            @:param: key: An object to serialize
+            @:param: key_schema : Avro schema for key
+            @:exception: SerializerError
+        """
+        topic = kwargs.pop('topic', None)
+        if not topic:
+            raise ClientError("Topic name not specified.")
+        value = kwargs.pop('value', None)
+        key = kwargs.pop('key', None)
+
+        value = self._serializer.fast_encode_record(self.value_schema_id, self.value_json_schema, value)
+        key = self._serializer.fast_encode_record(self.key_schema_id, self.key_json_schema, key)
+
+        super(FastAvroProducer, self).produce(topic, value, key, **kwargs)
 
 
 class AvroConsumer(Consumer):
